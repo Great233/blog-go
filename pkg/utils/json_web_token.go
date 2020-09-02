@@ -3,6 +3,7 @@ package utils
 import (
 	"blog/config"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	uuid "github.com/satori/go.uuid"
@@ -25,11 +26,11 @@ func GenerateJsonWebToken(user *User) (string, error) {
 	claims := Claims{
 		user,
 		jwt.StandardClaims{
-			Audience:  "Great's blog",
-			ExpiresAt: 30 * 60,
+			Audience:  "Go-gin-blog",
+			ExpiresAt: now + 30 * 60,
 			Id:        id.String(),
 			IssuedAt:  now,
-			Issuer:    "Great",
+			Issuer:    "blog",
 			NotBefore: now,
 			Subject:   "Session",
 		},

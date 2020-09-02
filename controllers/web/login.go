@@ -5,6 +5,7 @@ import (
 	"blog/pkg/utils"
 	"blog/services"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type loginForm struct {
@@ -18,7 +19,7 @@ func Login(c *gin.Context) {
 
 	err = c.ShouldBindJSON(&form)
 	if err != nil {
-		response.BadRequestWithValidationError(err, "")
+		response.BadRequestWithValidationError(err, nil)
 		return
 	}
 
@@ -28,12 +29,12 @@ func Login(c *gin.Context) {
 
 	user, err := userService.GetByUsername()
 	if err != nil {
-		response.BadRequest("用户名或密码错误", nil)
+		response.BadRequest(response.UserIsNotExist, nil)
 		return
 	}
 
 	if !utils.PasswordVerify(user.Password, form.Password) {
-		response.BadRequest("用户名或密码错误", nil)
+		response.BadRequest(response.PasswordVerifyFailed, nil)
 		return
 	}
 
@@ -41,12 +42,13 @@ func Login(c *gin.Context) {
 		Username: user.Username,
 	})
 	if err != nil {
-		response.ServerError(err.Error(), nil)
+		response.ServerError(response.TokenGenerateFailed, nil)
 		return
 	}
 
-	c.Header("xsrf-token", token)
-	response.Created("success", nil)
+	response.Respond(http.StatusCreated, response.Ok, nil, map[string]string{
+		"xsrf-token": token,
+	})
 }
 
 func Logout(c *gin.Context) {

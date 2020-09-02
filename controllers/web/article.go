@@ -1,12 +1,11 @@
 package web
 
 import (
+	"blog/models"
 	"blog/pkg/response"
 	"blog/services"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"log"
 	"math"
 	"strconv"
 	"time"
@@ -14,15 +13,14 @@ import (
 
 type ArticleForm struct {
 	Path        string `json:"path" binding:"required,max=50" comment:"路径"`
-	Title       string `json:"title" binding:"required,max=100"`
-	Description string `json:"description" binding:"required,max=255"`
-	Content     string `json:"content" binding:"required,max=65535"`
-	PublishedAt string `json:"published_at" binding:"required"`
-	TagId       []uint `json:"tag_id" binding:"required,dive,numeric,min=1"`
+	Title       string `json:"title" binding:"required,max=100" comment:"标题"`
+	Description string `json:"description" binding:"required,max=255" comment:"描述"`
+	Content     string `json:"content" binding:"required,max=65535" comment:"内容"`
+	PublishedAt string `json:"published_at" binding:"required" comment:"发布时间"`
+	TagId       []uint `json:"tag_id" binding:"required,dive,numeric,min=1" comment:"标签"`
 }
 
 func GetArticles(c *gin.Context) {
-	fmt.Println("aaa")
 	pageParam := c.Query("page")
 	pageSizeParam := c.Query("size")
 
@@ -46,23 +44,25 @@ func GetArticles(c *gin.Context) {
 		PageSize: int(math.Max(1, float64(pageSize))),
 	}
 
-	data := make(map[string]interface{})
-	data["total"] = 0
-	data["list"] = []interface{}{}
+	data := map[string]interface{}{
+		"total": 0,
+		"list":  []*models.Article{},
+	}
 
 	data["total"], err = articleService.CountAll()
 	if err != nil {
-		log.Fatalf("app.GetTags error: %v", err)
+		response.Success(response.Ok, data)
+		return
 	}
 
 	data["list"], err = articleService.GetAll()
-
 	if err != nil {
 		data["total"] = 0
-		log.Fatalf("app.GetTags error: %v", err)
+		response.Success(response.Ok, data)
+		return
 	}
 
-	response.Success("success", data)
+	response.Success(response.Ok, data)
 }
 
 func GetArticle(c *gin.Context) {
@@ -77,7 +77,7 @@ func GetArticle(c *gin.Context) {
 
 	id, err := strconv.Atoi(paramId)
 	if err != nil {
-		response.BadRequest("参数不合法", nil)
+		response.BadRequest(response.InvalidParams, nil)
 		return
 	}
 
@@ -87,10 +87,10 @@ func GetArticle(c *gin.Context) {
 
 	article, err := articleService.GetById()
 	if err != nil {
-		response.NotFound(err.Error(), "")
+		response.NotFound(response.ArticleIsNotExist, nil)
 		return
 	}
-	response.Success("success", article)
+	response.Success(response.Ok, article)
 }
 
 func AddArticle(c *gin.Context) {
@@ -105,7 +105,7 @@ func AddArticle(c *gin.Context) {
 
 	var publishedAt time.Time
 	if publishedAt, err = time.ParseInLocation("2006-01-02", form.PublishedAt, time.Local); err != nil {
-		response.BadRequestWithValidationError(err, nil)
+		response.BadRequest(response.InvalidParams, nil)
 		return
 	}
 
@@ -119,17 +119,17 @@ func AddArticle(c *gin.Context) {
 	}
 
 	if err = articleService.Exists(); err != nil {
-		response.BadRequest("标题或路径已存在", nil)
+		response.BadRequest(response.PathOrTitleIsAlreadyExist, nil)
 		return
 	}
 
 	err = articleService.Add()
 	if err != nil {
-		response.BadRequest("添加失败", nil)
+		response.ServerError(response.AddArticleFailed, nil)
 		return
 	}
 
-	response.Created("success", "")
+	response.Created(response.Ok, nil)
 }
 
 func EditArticle(c *gin.Context) {
@@ -144,7 +144,7 @@ func EditArticle(c *gin.Context) {
 
 	id, err := strconv.Atoi(paramId)
 	if err != nil {
-		response.BadRequest("参数不合法", "")
+		response.BadRequest(response.InvalidParams, nil)
 		return
 	}
 	var form ArticleForm
@@ -152,13 +152,13 @@ func EditArticle(c *gin.Context) {
 	err = c.ShouldBind(&form)
 
 	if err != nil {
-		response.BadRequestWithValidationError(err, err.Error())
+		response.BadRequestWithValidationError(err, nil)
 		return
 	}
 
 	var publishedAt time.Time
 	if publishedAt, err = time.ParseInLocation("2006-01-02", form.PublishedAt, time.Local); err != nil {
-		response.BadRequest(err.Error(), nil)
+		response.BadRequest(response.InvalidParams, nil)
 		return
 	}
 
@@ -173,13 +173,13 @@ func EditArticle(c *gin.Context) {
 	}
 
 	if err = articleService.Exists(); err != nil {
-		response.BadRequest("标题或路径已存在", nil)
+		response.BadRequest(response.PathOrTitleIsAlreadyExist, nil)
 		return
 	}
 
 	err = articleService.Edit()
 	if err != nil {
-		response.BadRequest("更新失败", "")
+		response.BadRequest(response.EditArticleFailed, "")
 		return
 	}
 	response.NoContent()
@@ -197,7 +197,7 @@ func DeleteArticle(c *gin.Context) {
 
 	id, err := strconv.Atoi(paramId)
 	if err != nil {
-		response.BadRequest("参数不合法", nil)
+		response.BadRequest(response.InvalidParams, nil)
 		return
 	}
 
@@ -206,13 +206,13 @@ func DeleteArticle(c *gin.Context) {
 	}
 	_, err = articleService.GetById()
 	if err != nil {
-		response.NotFound("1", "")
+		response.NotFound(response.ArticleIsNotExist, "")
 		return
 	}
 
 	err = articleService.Delete()
 	if err != nil {
-		response.ServerError(err.Error(), "")
+		response.ServerError(response.DeleteArticleFailed, "")
 		return
 	}
 	response.NoContent()

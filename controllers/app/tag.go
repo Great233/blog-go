@@ -4,16 +4,11 @@ import (
 	"blog/pkg/response"
 	"blog/services"
 	"github.com/gin-gonic/gin"
-	"log"
 )
 
 func GetTags(c *gin.Context) {
 	tagService := services.Tag{}
-	tags, err := tagService.GetAll()
-
-	if err != nil {
-		log.Fatalf("app.GetTags error: %v", err)
-	}
+	tags, _ := tagService.GetAll()
 
 	response.Success("success", tags)
 }

@@ -13,13 +13,12 @@ func Init() *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
-	router.Use(middlewares.CustomValidator())
 
 	router.Use(response.BeforeResponse())
 
 	appRouter := router.Group("/app")
 	{
-		appRouter.GET("/articles/", app.GetArticles)
+		appRouter.GET("/articles", app.GetArticles)
 		appRouter.GET("/articles/:path", app.GetArticle)
 		appRouter.GET("/tags", app.GetTags)
 		appRouter.GET("/tags/:tag", app.GetArticles)

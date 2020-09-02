@@ -8,23 +8,33 @@ import (
 	"github.com/go-playground/validator/v10"
 	zhTrans "github.com/go-playground/validator/v10/translations/zh"
 	"log"
+	"net/http"
+	"reflect"
 )
 
 type Response struct {
-	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
 }
 
-var Context *gin.Context
+var context *gin.Context
 
-var Trans ut.Translator
+var trans ut.Translator
 
 func Init()  {
+	validate := binding.Validator.Engine().(*validator.Validate)
+	validate.RegisterTagNameFunc(func(field reflect.StructField) string {
+		comment := field.Tag.Get("comment")
+		if comment == "" {
+			comment = field.Name
+		}
+		return comment
+	})
+
 	cn := zh.New()
 	uni := ut.New(cn, cn)
-	Trans, _ = uni.GetTranslator("zh")
-	err := zhTrans.RegisterDefaultTranslations(binding.Validator.Engine().(*validator.Validate), Trans)
+	trans, _ = uni.GetTranslator("zh")
+	err := zhTrans.RegisterDefaultTranslations(binding.Validator.Engine().(*validator.Validate), trans)
 	if err != nil {
 		log.Fatalf("middlewares.CustomValidator error: %v", err)
 	}
@@ -32,87 +42,61 @@ func Init()  {
 
 func BeforeResponse() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		Context = c
+		context = c
 	}
 }
 
-func Success(message string, data interface{}) {
-	Context.JSON(200, Response{
-		Code:    0,
+func Respond(statusCode int, message string, data interface{}, headers map[string]string) {
+	for key, value := range headers {
+		context.Header(key, value)
+	}
+	context.JSON(statusCode, Response{
 		Message: message,
 		Data:    data,
 	})
+}
+
+func Success(message string, data interface{}) {
+	Respond(http.StatusOK, message, data, nil)
 	return
 }
 
 func Created(message string, data interface{}) {
-	Context.JSON(201, Response{
-		Code:    0,
-		Message: message,
-		Data:    data,
-	})
+	Respond(http.StatusCreated, message, data, nil)
 	return
 }
 
 func NoContent() {
-	Context.JSON(204, Response{
-		Code:    0,
-		Message: "",
-		Data:    "",
-	})
+	Respond(http.StatusNoContent, "", nil, nil)
 	return
 }
 
 func BadRequest(message string, data interface{}) {
-	Context.JSON(400, Response{
-		Code:    40000,
-		Message: message,
-		Data:    data,
-	})
+	Respond(http.StatusBadRequest, message, data, nil)
 	return
 }
 
 func BadRequestWithValidationError(err error, data interface{}) {
-	errs := err.(validator.ValidationErrors)
-	if len(errs) <= 0 {
-		Context.JSON(400, Response{
-			Code:    40000,
-			Message: "参数不合法",
-			Data:    data,
-		})
+	errs, ok := err.(validator.ValidationErrors)
+	if !ok || len(errs) <= 0 {
+		Respond(http.StatusBadRequest, InvalidParams, data, nil)
 		return
 	}
 	for _, e := range errs {
-		Context.JSON(400, Response{
-			Code:    40000,
-			Message: e.Translate(Trans),
-			Data:    data,
-		})
+		Respond(http.StatusBadRequest, e.Translate(trans), data, nil)
 		return
 	}
 }
 
 func NotFound(message string, data interface{}) {
-	Context.JSON(404, Response{
-		Code:    40004,
-		Message: message,
-		Data:    data,
-	})
+	Respond(http.StatusNotFound, message, data, nil)
 	return
 }
 
 func Unauthorized(message string, data interface{}) {
-	Context.JSON(401, Response{
-		Code:    40001,
-		Message: message,
-		Data:    data,
-	})
+	Respond(http.StatusUnauthorized, message, data, nil)
 }
 
 func ServerError(message string, data interface{}) {
-	Context.JSON(500, Response{
-		Code:    50000,
-		Message: message,
-		Data:    data,
-	})
+	Respond(http.StatusInternalServerError, message, data, nil)
 }

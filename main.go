@@ -3,6 +3,7 @@ package main
 import (
 	"blog/config"
 	"blog/models"
+	"blog/pkg/response"
 	"blog/router"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -13,6 +14,7 @@ import (
 func init() {
 	config.Init()
 	models.Init()
+	response.Init()
 }
 
 func main() {

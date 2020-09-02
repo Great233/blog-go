@@ -5,7 +5,6 @@ import (
 	"blog/services"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"log"
 	"math"
 	"strconv"
 )
@@ -27,24 +26,28 @@ func GetArticles(c *gin.Context) {
 		pageSize = 15
 	}
 
-	validate := validator.New()
-	err = validate.Var(tag, "required,max=20")
-	if err != nil {
-		response.NotFound("", nil)
-		return
-	}
+	var tagId []uint
+	if tag != "" {
+		validate := validator.New()
+		err = validate.Var(tag, "max=20")
+		if err != nil {
+			response.NotFound(response.TagIsNotExist, nil)
+			return
+		}
 
-	tagService := services.Tag{
-		Title: tag,
-	}
-	tagRecord, err := tagService.Get()
-	if err != nil {
-		response.NotFound("", nil)
-		return
+		tagService := services.Tag{
+			Title: tag,
+		}
+		tagRecord, err := tagService.Get()
+		if err != nil {
+			response.NotFound(response.TagIsNotExist, nil)
+			return
+		}
+		tagId = append(tagId, tagRecord.Id)
 	}
 
 	articleService := services.Article{
-		TagId:    []uint{tagRecord.Id},
+		TagId:    tagId,
 		Page:     int(math.Max(1, float64(page))),
 		PageSize: int(math.Max(1, float64(pageSize))),
 	}
@@ -55,17 +58,19 @@ func GetArticles(c *gin.Context) {
 
 	data["total"], err = articleService.CountAll()
 	if err != nil {
-		log.Fatalf("app.GetTags error: %v", err)
+		response.Success(response.Ok, data)
+		return
 	}
 
 	data["list"], err = articleService.GetAll()
 
 	if err != nil {
 		data["total"] = 0
-		log.Fatalf("app.GetTags error: %v", err)
+		response.ServerError(response.Ok, data)
+		return
 	}
 
-	response.Success("success", data)
+	response.Success(response.Ok, data)
 }
 
 func GetArticle(c *gin.Context) {
@@ -75,7 +80,7 @@ func GetArticle(c *gin.Context) {
 	validate := validator.New()
 	err = validate.Var(path, "required,max=50")
 	if err != nil {
-		response.NotFound("", nil)
+		response.NotFound(response.ArticleIsNotExist, nil)
 		return
 	}
 	articleService := services.Article{
@@ -84,7 +89,8 @@ func GetArticle(c *gin.Context) {
 
 	article, err := articleService.GetByPath()
 	if err != nil {
-		response.ServerError("", "")
+		response.NotFound(response.ArticleIsNotExist, nil)
+		return
 	}
-	response.Success("success", article)
+	response.Success(response.Ok, article)
 }

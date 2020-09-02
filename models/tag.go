@@ -28,13 +28,13 @@ func GetAllTags(offset int, limit int, condition map[string]interface{}) ([]*Tag
 }
 
 func CountAllTags(condition map[string]interface{}) (int, error) {
-	query := Query()
+	query := Query().Model(&Tag{})
 
 	if len(condition) > 0 {
 		query = query.Where(condition)
 	}
 	var total int
-	err := query.Count(total).Error
+	err := query.Count(&total).Error
 	if err != nil {
 		return 0, err
 	}

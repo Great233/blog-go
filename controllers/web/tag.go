@@ -30,33 +30,24 @@ func GetTags(c *gin.Context) {
 		PageSize: pageSize,
 	}
 
-	var total int
-	total, err = tagService.CountAll()
-	if err != nil {
-		response.ServerError(err.Error(), "")
-		return
-	}
-
 	data := map[string]interface{}{
 		"total": 0,
-		"list":  []interface{}{},
+		"list":  []*models.Tag{},
 	}
 
-	if total <= 0 {
-		response.Success("success", data)
+	data["total"], err = tagService.CountAll()
+	if err != nil {
+		response.Success(response.Ok, data)
 		return
 	}
-	data["total"] = total
 
-	var tags []*models.Tag
-	tags, err = tagService.GetAll()
+	data["list"], err = tagService.GetAll()
 	if err != nil {
 		data["total"] = 0
-		response.ServerError(err.Error(), data)
+		response.Success(response.Ok, data)
 		return
 	}
-	data["list"] = tags
-	response.Success("", data)
+	response.Success(response.Ok, data)
 }
 
 func GetTag(c *gin.Context) {
@@ -71,7 +62,7 @@ func GetTag(c *gin.Context) {
 
 	id, err := strconv.Atoi(paramId)
 	if err != nil {
-		response.BadRequest("参数不合法", "")
+		response.BadRequest(response.InvalidParams, nil)
 		return
 	}
 
@@ -81,10 +72,10 @@ func GetTag(c *gin.Context) {
 	var tag *models.Tag
 	tag, err = tagService.Get()
 	if err != nil {
-		response.NotFound("", "")
+		response.NotFound(response.TagIsNotExist, nil)
 		return
 	}
-	response.Success("success", tag)
+	response.Success(response.Ok, tag)
 }
 
 func AddTag(c *gin.Context) {
@@ -102,16 +93,16 @@ func AddTag(c *gin.Context) {
 	}
 
 	if err = tagService.Exist(); err != nil {
-		response.BadRequest("标签已存在", "")
+		response.BadRequest(response.TagIsAlreadyExist, nil)
 		return
 	}
 
 	err = tagService.Add()
 	if err != nil {
-		response.ServerError(err.Error(), "")
+		response.ServerError(response.AddTagFailed, nil)
 		return
 	}
-	response.Created("success", "")
+	response.Created(response.Ok, nil)
 }
 
 func EditTag(c *gin.Context) {
@@ -131,7 +122,7 @@ func EditTag(c *gin.Context) {
 
 	id, err := strconv.Atoi(paramId)
 	if err != nil {
-		response.BadRequest("参数不合法", "")
+		response.BadRequest(response.InvalidParams, nil)
 		return
 	}
 
@@ -141,13 +132,13 @@ func EditTag(c *gin.Context) {
 	}
 
 	if err = tagService.Exist(); err != nil {
-		response.BadRequest("标签已存在", "")
+		response.BadRequest(response.TagIsAlreadyExist, nil)
 		return
 	}
 
 	err = tagService.Edit()
 	if err != nil {
-		response.ServerError("", "")
+		response.ServerError(response.EditTagFailed, nil)
 		return
 	}
 	response.NoContent()
@@ -164,7 +155,7 @@ func DeleteTag(c *gin.Context) {
 
 	id, err := strconv.Atoi(paramId)
 	if err != nil {
-		response.BadRequest("参数不合法", "")
+		response.BadRequest(response.InvalidParams, nil)
 		return
 	}
 
@@ -173,7 +164,7 @@ func DeleteTag(c *gin.Context) {
 	}
 	_, err = tagService.Get()
 	if err != nil {
-		response.NotFound("标签不存在", "")
+		response.NotFound(response.TagIsNotExist, nil)
 		return
 	}
 
@@ -182,13 +173,13 @@ func DeleteTag(c *gin.Context) {
 	}
 	total, err := articleService.CountAll()
 	if err != nil || total > 0 {
-		response.BadRequest("标签下有文章，不能删除", "")
+		response.BadRequest(response.DeleteTagFailed, nil)
 		return
 	}
 
 	err = tagService.Delete()
 	if err != nil {
-		response.ServerError(err.Error(), "")
+		response.ServerError(response.DeleteTagFailed, nil)
 		return
 	}
 	response.NoContent()

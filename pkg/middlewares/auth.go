@@ -12,7 +12,7 @@ func JsonWebToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		xsrfToken := c.GetHeader("xsrf-token")
 		if xsrfToken == "" {
-			response.Unauthorized("token cannot be null", nil)
+			response.Unauthorized(response.InvalidParams, nil)
 			c.Abort()
 			return
 		}
@@ -22,10 +22,10 @@ func JsonWebToken() gin.HandlerFunc {
 			var message string
 			switch err.(*jwt.ValidationError).Errors {
 			case jwt.ValidationErrorExpired:
-				message = "token has expired"
+				message = response.TokenHasExpired
 				break
 			default:
-				message = "invalid token"
+				message = response.TokenAuthFailed
 				break
 			}
 			response.Unauthorized(message, nil)
@@ -35,7 +35,7 @@ func JsonWebToken() gin.HandlerFunc {
 
 		_, err = models.GetUserByUsername(userInfo.Username)
 		if err != nil {
-			response.Unauthorized("user is not exist", nil)
+			response.Unauthorized(response.UserIsNotExist, nil)
 			c.Abort()
 			return
 		}

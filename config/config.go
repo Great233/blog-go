@@ -69,7 +69,7 @@ type redis struct {
 
 var App = &app{}
 
-const conf string = "config/config.yml"
+const conf string = "E:/go-gin/config/config.yml"
 
 func Init() {
 	fileContent, readFileErr := ioutil.ReadFile(conf)

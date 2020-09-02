@@ -27,8 +27,8 @@ func (a *Article) GetAll() ([]*models.Article, error) {
 	}
 
 	tagCondition := make(map[string]interface{})
-	if a.TagId[0] > 0 {
-		tagCondition["id"] = a.TagId[0]
+	if len(a.TagId) > 0 && a.TagId[0] > 0 {
+		tagCondition["tag_id=?"] = a.TagId[0]
 	}
 
 	return models.GetArticles(
@@ -45,8 +45,10 @@ func (a *Article) CountAll() (int, error) {
 		condition["title like %?%"] = a.Title
 	}
 
-	tagCondition := map[string]interface{}{
-		"id": a.TagId[0],
+	tagCondition := make(map[string]interface{})
+
+	if len(a.TagId) > 0 && a.TagId[0] > 0 {
+		tagCondition["tag_id=?"] = a.TagId[0]
 	}
 	return models.CountAll(condition, tagCondition)
 }

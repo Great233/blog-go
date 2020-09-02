@@ -35,9 +35,15 @@ func GetArticles(offset int,
 		condStrings = append(condStrings, key)
 		condArgs = append(condArgs, value)
 	}
-
-	err = Query().
-		Preload("Tags", tagConditions).
+	db := Query()
+	if len(tagConditions) > 0 {
+		for key, value := range tagConditions {
+			condStrings = append(condStrings, key)
+			condArgs = append(condArgs, value)
+		}
+		db = db.Joins("left join gb_article_tags on gb_article_tags.article_id=gb_articles.id")
+	}
+	err = db.Preload("Tags").
 		Where(strings.Join(condStrings, " and "), condArgs...).
 		Offset(offset).
 		Limit(limit).
@@ -51,15 +57,9 @@ func GetArticles(offset int,
 }
 
 func CountAll(conditions map[string]interface{},
-	tagCondition map[string]interface{}) (int, error) {
-	var count int
-	var tag Tag
+	tagConditions map[string]interface{}) (int, error) {
+	total := 0
 	var err error
-
-	err = Query().Model(&Tag{}).Where(tagCondition).First(&tag).Error
-	if err != nil {
-		return 0, nil
-	}
 
 	var condStrings []string
 	var condArgs []interface{}
@@ -67,12 +67,19 @@ func CountAll(conditions map[string]interface{},
 		condStrings = append(condStrings, key)
 		condArgs = append(condArgs, value)
 	}
-	condStrings = append(condStrings, "tag_id=?")
-	condArgs = append(condArgs, tag.Id)
-	err = Query().Model(&Article{}).
+	db := Query()
+	if len(tagConditions) > 0 {
+		for key, value := range tagConditions {
+			condStrings = append(condStrings, key)
+			condArgs = append(condArgs, value)
+		}
+		db = db.Joins("left join gb_article_tags on gb_article_tags.article_id=gb_articles.id")
+	}
+	err = db.Model(&Article{}).
 		Where(strings.Join(condStrings, " and "), condArgs...).
-		Count(&count).Error
-	return count, err
+		Count(&total).
+		Error
+	return total, err
 }
 
 func GetArticleByPath(path string) (*Article, error) {
