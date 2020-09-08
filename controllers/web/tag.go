@@ -2,12 +2,30 @@ package web
 
 import (
 	"blog/models"
+	"blog/pkg/middlewares"
 	"blog/pkg/response"
 	"blog/services"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"strconv"
 )
+
+type Tag struct{}
+
+func (t *Tag) InitRouter(router *gin.Engine) {
+	webRouter := router.Group("/web")
+	{
+		tagRouter := webRouter.Use(middlewares.JsonWebToken())
+		{
+			tagRouter.GET("/tags", GetTags)
+			tagRouter.GET("/tags/:id", GetTag)
+			tagRouter.POST("/tags", AddTag)
+			tagRouter.PUT("/tags/:id", EditTag)
+			tagRouter.DELETE("/tags/:id", DeleteTag)
+		}
+	}
+}
 
 func GetTags(c *gin.Context) {
 	pageParam := c.Query("page")

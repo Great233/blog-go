@@ -4,8 +4,9 @@ import (
 	"blog/pkg/response"
 	"blog/pkg/utils"
 	"blog/services"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type loginForm struct {
@@ -13,7 +14,17 @@ type loginForm struct {
 	Password string `json:"password" binding:"required" comment:"密码"`
 }
 
-func Login(c *gin.Context) {
+type Login struct{}
+
+func (a *Login) InitRouter(router *gin.Engine) {
+	webRouter := router.Group("/web")
+	{
+		webRouter.POST("/login", LoginM)
+		webRouter.DELETE("/logout", Logout)
+	}
+}
+
+func LoginM(c *gin.Context) {
 	var form loginForm
 	var err error
 

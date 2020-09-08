@@ -2,13 +2,15 @@ package web
 
 import (
 	"blog/models"
+	"blog/pkg/middlewares"
 	"blog/pkg/response"
 	"blog/services"
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 type ArticleForm struct {
@@ -18,6 +20,22 @@ type ArticleForm struct {
 	Content     string `json:"content" binding:"required,max=65535" comment:"内容"`
 	PublishedAt string `json:"published_at" binding:"required" comment:"发布时间"`
 	TagId       []uint `json:"tag_id" binding:"required,dive,numeric,min=1" comment:"标签"`
+}
+
+type Article struct{}
+
+func (a *Article) InitRouter(router *gin.Engine) {
+	webRouter := router.Group("/web")
+	{
+		articleRouter := webRouter.Use(middlewares.JsonWebToken())
+		{
+			articleRouter.GET("/articles", GetArticles)
+			articleRouter.GET("/articles/:id", GetArticle)
+			articleRouter.POST("/articles", AddArticle)
+			articleRouter.PUT("/articles/:id", EditArticle)
+			articleRouter.DELETE("/articles/:id", DeleteArticle)
+		}
+	}
 }
 
 func GetArticles(c *gin.Context) {

@@ -3,11 +3,22 @@ package app
 import (
 	"blog/pkg/response"
 	"blog/services"
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"math"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
+
+type Article struct{}
+
+func (a *Article) InitRouter(router *gin.Engine) {
+	appRouter := router.Group("/app")
+	{
+		appRouter.GET("/articles", GetArticles)
+		appRouter.GET("/articles/:path", GetArticle)
+	}
+}
 
 func GetArticles(c *gin.Context) {
 	pageParam := c.Query("page")
